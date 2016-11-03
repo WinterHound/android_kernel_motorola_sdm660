@@ -394,7 +394,7 @@ static int __recover_dot_dentries(struct inode *dir, nid_t pino)
 
 	f2fs_lock_op(sbi);
 
-	de = f2fs_find_entry(dir, &dot, &page);
+	de = f2fs_find_entry(dir, &dot, &page, 0);
 	if (de) {
 		f2fs_put_page(page, 0);
 	} else if (IS_ERR(page)) {
@@ -406,7 +406,7 @@ static int __recover_dot_dentries(struct inode *dir, nid_t pino)
 			goto out;
 	}
 
-	de = f2fs_find_entry(dir, &dotdot, &page);
+	de = f2fs_find_entry(dir, &dotdot, &page, 0);
 	if (de)
 		f2fs_put_page(page, 0);
 	else if (IS_ERR(page))
@@ -443,7 +443,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
 		goto out;
 	}
 
-	de = f2fs_find_entry(dir, &dentry->d_name, &page);
+	de = f2fs_find_entry(dir, &dentry->d_name, &page, flags);
 	if (!de) {
 		if (IS_ERR(page)) {
 			err = PTR_ERR(page);
@@ -514,7 +514,7 @@ static int f2fs_unlink(struct inode *dir, struct dentry *dentry)
 	if (err)
 		return err;
 
-	de = f2fs_find_entry(dir, &dentry->d_name, &page);
+	de = f2fs_find_entry(dir, &dentry->d_name, &page, 0);
 	if (!de) {
 		if (IS_ERR(page))
 			err = PTR_ERR(page);
@@ -848,7 +848,7 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 			goto out;
 	}
 
-	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page);
+	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page, 0);
 	if (!old_entry) {
 		if (IS_ERR(old_page))
 			err = PTR_ERR(old_page);
@@ -878,7 +878,7 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 		err = -ENOENT;
 		new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name,
-						&new_page);
+						&new_page, 0);
 		if (!new_entry) {
 			if (IS_ERR(new_page))
 				err = PTR_ERR(new_page);
@@ -1034,14 +1034,14 @@ static int f2fs_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (err)
 		goto out;
 
-	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page);
+	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page, 0);
 	if (!old_entry) {
 		if (IS_ERR(old_page))
 			err = PTR_ERR(old_page);
 		goto out;
 	}
 
-	new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name, &new_page);
+	new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name, &new_page, 0);
 	if (!new_entry) {
 		if (IS_ERR(new_page))
 			err = PTR_ERR(new_page);

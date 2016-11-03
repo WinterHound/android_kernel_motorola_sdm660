@@ -2797,7 +2797,7 @@ struct dentry *f2fs_get_parent(struct dentry *child);
 unsigned char f2fs_get_de_type(struct f2fs_dir_entry *de);
 struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
 			f2fs_hash_t namehash, int *max_slots,
-			struct f2fs_dentry_ptr *d);
+			struct f2fs_dentry_ptr *d, unsigned int);
 int f2fs_fill_dentries(struct dir_context *ctx, struct f2fs_dentry_ptr *d,
 			unsigned int start_pos, struct fscrypt_str *fstr);
 void f2fs_do_make_empty_dir(struct inode *inode, struct inode *parent,
@@ -2810,9 +2810,11 @@ void f2fs_update_parent_metadata(struct inode *dir, struct inode *inode,
 int f2fs_room_for_filename(const void *bitmap, int slots, int max_slots);
 void f2fs_drop_nlink(struct inode *dir, struct inode *inode);
 struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
-			struct fscrypt_name *fname, struct page **res_page);
+			struct fscrypt_name *fname, struct page **res_page,
+			unsigned int);
 struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
-			const struct qstr *child, struct page **res_page);
+			const struct qstr *child, struct page **res_page,
+			unsigned int);
 struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p);
 ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
 			struct page **page);

@@ -9,6 +9,7 @@
  * published by the Free Software Foundation.
  */
 #include <linux/fs.h>
+#include <linux/namei.h>
 #include <linux/f2fs_fs.h>
 #include <linux/sched.h>
 #include "f2fs.h"
@@ -88,7 +89,8 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 				struct fscrypt_name *fname,
 				f2fs_hash_t namehash,
 				int *max_slots,
-				struct page **res_page)
+				struct page **res_page,
+				unsigned int flags)
 {
 	struct f2fs_dentry_block *dentry_blk;
 	struct f2fs_dir_entry *de;
@@ -97,7 +99,7 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 	dentry_blk = (struct f2fs_dentry_block *)page_address(dentry_page);
 
 	make_dentry_ptr_block(NULL, &d, dentry_blk);
-	de = f2fs_find_target_dentry(fname, namehash, max_slots, &d);
+	de = f2fs_find_target_dentry(fname, namehash, max_slots, &d, flags);
 	if (de)
 		*res_page = dentry_page;
 
@@ -106,7 +108,7 @@ static struct f2fs_dir_entry *find_in_block(struct page *dentry_page,
 
 struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
 			f2fs_hash_t namehash, int *max_slots,
-			struct f2fs_dentry_ptr *d)
+			struct f2fs_dentry_ptr *d, unsigned int flags)
 {
 	struct f2fs_dir_entry *de;
 	unsigned long bit_pos = 0;
@@ -130,8 +132,12 @@ struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
 
 		if (de->hash_code == namehash &&
 		    fscrypt_match_name(fname, d->filename[bit_pos],
-				       le16_to_cpu(de->name_len)))
+				       le16_to_cpu(de->name_len))) {
+		} else if (flags & LOOKUP_NOCASE && de->hash_code == namehash &&
+			fscrypt_match_name(fname, d->filename[bit_pos],
+					le16_to_cpu(de->name_len))) {
 			goto found;
+		}
 
 		if (max_slots && max_len > *max_slots)
 			*max_slots = max_len;
@@ -150,7 +156,8 @@ found:
 static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 					unsigned int level,
 					struct fscrypt_name *fname,
-					struct page **res_page)
+					struct page **res_page,
+					unsigned int flags)
 {
 	struct qstr name = FSTR_TO_QSTR(&fname->disk_name);
 	int s = GET_DENTRY_SLOTS(name.len);
@@ -183,7 +190,7 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 		}
 
 		de = find_in_block(dentry_page, fname, namehash, &max_slots,
-								res_page);
+							res_page, flags);
 		if (de)
 			break;
 
@@ -201,7 +208,8 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
 }
 
 struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
-			struct fscrypt_name *fname, struct page **res_page)
+			struct fscrypt_name *fname, struct page **res_page,
+			unsigned int flags)
 {
 	unsigned long npages = dir_blocks(dir);
 	struct f2fs_dir_entry *de = NULL;
@@ -230,7 +238,7 @@ struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
 
 	for (level = 0; level < max_depth; level++) {
 		*res_page = NULL;
-		de = find_in_level(dir, level, fname, res_page);
+		de = find_in_level(dir, level, fname, res_page, flags);
 		if (de || IS_ERR(*res_page))
 			break;
 	}
@@ -248,7 +256,8 @@ out:
  * Entry is guaranteed to be valid.
  */
 struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
-			const struct qstr *child, struct page **res_page)
+			const struct qstr *child, struct page **res_page,
+			unsigned int flags)
 {
 	struct f2fs_dir_entry *de = NULL;
 	struct fscrypt_name fname;
@@ -263,7 +272,7 @@ struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
 		return NULL;
 	}
 
-	de = __f2fs_find_entry(dir, &fname, res_page);
+	de = __f2fs_find_entry(dir, &fname, res_page, flags);
 
 	fscrypt_free_filename(&fname);
 	return de;
@@ -282,7 +291,7 @@ ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
 	ino_t res = 0;
 	struct f2fs_dir_entry *de;
 
-	de = f2fs_find_entry(dir, qstr, page);
+	de = f2fs_find_entry(dir, qstr, page, 0);
 	if (de) {
 		res = le32_to_cpu(de->ino);
 		f2fs_put_page(*page, 0);
