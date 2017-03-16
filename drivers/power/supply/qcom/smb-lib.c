@@ -3448,6 +3448,12 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		if (chg->mmi.factory_mode)
 			chg->mmi.factory_kill_armed = true;
 	} else {
+		/* Re-enable the high duty cycle irq if it was disabled */
+		if (chg->is_hdc) {
+			enable_irq(chg->irq_info[HIGH_DUTY_CYCLE_IRQ].irq);
+			chg->is_hdc = 0;
+		}
+
 		if (chg->wa_flags & BOOST_BACK_WA) {
 			data = chg->irq_info[SWITCH_POWER_OK_IRQ].irq_data;
 			if (data) {
@@ -4585,7 +4591,7 @@ static void clear_hdc_work(struct work_struct *work)
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						clear_hdc_work.work);
 
-	chg->is_hdc = 0;
+	smblib_err(chg, "High Duty Cycle - report input limited\n");
 	if (chg->irq_info[HIGH_DUTY_CYCLE_IRQ].irq)
 		enable_irq(chg->irq_info[HIGH_DUTY_CYCLE_IRQ].irq);
 }
