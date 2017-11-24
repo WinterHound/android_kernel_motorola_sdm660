@@ -133,6 +133,7 @@ struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
 		if (de->hash_code == namehash &&
 		    fscrypt_match_name(fname, d->filename[bit_pos],
 				       le16_to_cpu(de->name_len))) {
+			goto found;
 		} else if (flags & LOOKUP_NOCASE && de->hash_code == namehash &&
 			fscrypt_match_name(fname, d->filename[bit_pos],
 					le16_to_cpu(de->name_len))) {
