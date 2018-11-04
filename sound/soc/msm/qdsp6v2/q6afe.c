@@ -33,9 +33,6 @@
 #ifdef CONFIG_SND_SOC_OPALUM
 #include <sound/ospl2xx.h>
 #endif
-#ifdef CONFIG_SND_SOC_TAS2560
-#include <sound/tas2560_algo.h>
-#endif
 
 #define WAKELOCK_TIMEOUT	5000
 enum {
@@ -151,17 +148,6 @@ int ospl2xx_afe_set_callback(
 	int32_t (*ospl2xx_callback_func)(struct apr_client_data *data))
 {
 	ospl2xx_callback = ospl2xx_callback_func;
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_SND_SOC_TAS2560
-int32_t (*tas2560_algo_callback)(struct apr_client_data *data);
-
-int tas2560_algo_afe_set_callback(
-	int32_t (*tas2560_algo_callback_func)(struct apr_client_data *data))
-{
-	tas2560_algo_callback = tas2560_algo_callback_func;
 	return 0;
 }
 #endif
@@ -576,16 +562,8 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 	    data->opcode == AFE_PORT_CMDRSP_GET_PARAM_V3) {
 		uint32_t *payload = data->payload;
 		uint32_t param_id;
-#if defined(CONFIG_SND_SOC_TAS2560)
-		int32_t *payload32 = data->payload;
 
-		if ((payload32[1] == AFE_TAS2560_ALGO_MODULE_RX) ||
-		     (payload32[1] == AFE_TAS2560_ALGO_MODULE_TX)) {
-			if (tas2560_algo_callback != NULL)
-				tas2560_algo_callback(data);
-			atomic_set(&this_afe.state, 0);
-		} else {
-#elif defined(CONFIG_SND_SOC_OPALUM)
+#ifdef CONFIG_SND_SOC_OPALUM
 		int32_t *payload32 = data->payload;
 
 		if (payload32[1] == AFE_CUSTOM_OPALUM_RX_MODULE ||
@@ -618,7 +596,7 @@ static int32_t afe_callback(struct apr_client_data *data, void *priv)
 						 data->payload_size))
 				return -EINVAL;
 		}
-#if defined(CONFIG_SND_SOC_OPALUM) || defined(CONFIG_SND_SOC_TAS2560)
+#ifdef CONFIG_SND_SOC_OPALUM
 		}
 #endif
 		wake_up(&this_afe.wait[data->token]);
@@ -1060,16 +1038,6 @@ int ospl2xx_afe_apr_send_pkt(void *data, int index)
 
 	ret = afe_apr_send_pkt(data, &this_afe.wait[index]);
 	return ret;
-}
-#endif
-
-#ifdef CONFIG_SND_SOC_TAS2560
-int tas2560_algo_afe_apr_send_pkt(void *data, int index)
-{
-        int ret = 0;
-
-        ret = afe_apr_send_pkt(data, &this_afe.wait[index]);
-        return ret;
 }
 #endif
 
